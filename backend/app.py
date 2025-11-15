@@ -11,7 +11,8 @@ CORS(app)
 # Database configuration
 # Default to ../data/database.db relative to backend folder
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_PATH = os.getenv('DATABASE_PATH', os.path.join(SCRIPT_DIR, '..', 'data', 'database.db'))
+DATABASE_PATH = os.getenv('DATABASE_PATH', os.path.join(
+    SCRIPT_DIR, '..', 'data', 'database.db'))
 
 # Lock for order updates (to prevent race conditions)
 order_locks = {}
@@ -274,7 +275,7 @@ def get_orders():
     # Get paginated orders
     offset = (page - 1) * per_page
     orders = conn.execute('''
-        SELECT id as order_id, status, driver_id
+        SELECT id as order_id, status, driver_id, pickup_time, dropoff_time
         FROM orders
         WHERE merchant_id = ?
         ORDER BY created_at DESC

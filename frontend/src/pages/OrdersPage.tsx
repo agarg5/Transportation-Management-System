@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
-import { api } from '../api/client'
-import type { Order, Merchant } from '../types'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
+import { useState, useEffect } from "react";
+import { api } from "../api/client";
+import type { Order, Merchant } from "../types";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import {
   Table,
   TableBody,
@@ -10,7 +10,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../components/ui/table'
+} from "../components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -18,106 +18,107 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../components/ui/dialog'
+} from "../components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select'
-import { Plus, Edit, X, Search } from 'lucide-react'
-import { format } from 'date-fns'
+} from "../components/ui/select";
+import { Plus, Edit, X, Search } from "lucide-react";
+import { format } from "date-fns";
 
 const STATUS_COLORS = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  assigned: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-}
+  pending: "bg-yellow-100 text-yellow-800",
+  assigned: "bg-blue-100 text-blue-800",
+  completed: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+};
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([])
-  const [merchants, setMerchants] = useState<Merchant[]>([])
-  const [selectedMerchant, setSelectedMerchant] = useState<number | null>(null)
-  const [page, setPage] = useState(1)
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
+  const [selectedMerchant, setSelectedMerchant] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    description: '',
-    pickup_time: '',
-    dropoff_time: '',
-    weight: '',
-  })
+    description: "",
+    pickup_time: "",
+    dropoff_time: "",
+    weight: "",
+  });
 
   useEffect(() => {
-    loadMerchants()
-  }, [])
+    loadMerchants();
+  }, []);
 
   useEffect(() => {
     if (selectedMerchant) {
-      loadOrders()
+      loadOrders();
     }
-  }, [selectedMerchant, page, statusFilter])
+  }, [selectedMerchant, page, statusFilter]);
 
   const loadMerchants = async () => {
     try {
-      const data = await api.getMerchants()
-      setMerchants(data)
+      const data = await api.getMerchants();
+      setMerchants(data);
       if (data.length > 0 && !selectedMerchant) {
-        setSelectedMerchant(data[0].id)
+        setSelectedMerchant(data[0].id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load merchants')
+      setError(err instanceof Error ? err.message : "Failed to load merchants");
     }
-  }
+  };
 
   const loadOrders = async () => {
-    if (!selectedMerchant) return
-    setLoading(true)
+    if (!selectedMerchant) return;
+    setLoading(true);
     try {
-      const data = await api.getOrders(selectedMerchant, page, 50)
-      setOrders(data)
+      const data = await api.getOrders(selectedMerchant, page, 50);
+      setOrders(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load orders')
+      setError(err instanceof Error ? err.message : "Failed to load orders");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+  console.log(orders);
 
   const handleCreate = () => {
-    setEditingOrder(null)
+    setEditingOrder(null);
     setFormData({
-      description: '',
-      pickup_time: '',
-      dropoff_time: '',
-      weight: '',
-    })
-    setIsDialogOpen(true)
-  }
+      description: "",
+      pickup_time: "",
+      dropoff_time: "",
+      weight: "",
+    });
+    setIsDialogOpen(true);
+  };
 
   const handleEdit = (order: Order) => {
-    setEditingOrder(order)
+    setEditingOrder(order);
     setFormData({
-      description: order.description || '',
+      description: order.description || "",
       pickup_time: order.pickup_time.slice(0, 16),
       dropoff_time: order.dropoff_time.slice(0, 16),
       weight: order.weight.toString(),
-    })
-    setIsDialogOpen(true)
-  }
+    });
+    setIsDialogOpen(true);
+  };
 
   const handleSubmit = async () => {
-    if (!selectedMerchant) return
+    if (!selectedMerchant) return;
 
-    setError(null)
-    setSuccess(null)
+    setError(null);
+    setSuccess(null);
 
     try {
       if (editingOrder) {
@@ -125,47 +126,47 @@ export default function OrdersPage() {
           merchant_id: selectedMerchant,
           ...formData,
           weight: parseFloat(formData.weight),
-        })
-        setSuccess('Order updated successfully')
+        });
+        setSuccess("Order updated successfully");
       } else {
         await api.createOrder({
           merchant_id: selectedMerchant,
           ...formData,
           weight: parseFloat(formData.weight),
-        })
-        setSuccess('Order created successfully')
+        });
+        setSuccess("Order created successfully");
       }
-      setIsDialogOpen(false)
-      loadOrders()
+      setIsDialogOpen(false);
+      loadOrders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save order')
+      setError(err instanceof Error ? err.message : "Failed to save order");
     }
-  }
+  };
 
   const handleCancel = async (orderId: number) => {
-    if (!confirm('Are you sure you want to cancel this order?')) return
+    if (!confirm("Are you sure you want to cancel this order?")) return;
 
     try {
-      await api.cancelOrder(orderId)
-      setSuccess('Order cancelled successfully')
-      loadOrders()
+      await api.cancelOrder(orderId);
+      setSuccess("Order cancelled successfully");
+      loadOrders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel order')
+      setError(err instanceof Error ? err.message : "Failed to cancel order");
     }
-  }
+  };
 
   const filteredOrders = orders.filter((order) => {
-    if (statusFilter !== 'all' && order.status !== statusFilter) return false
+    if (statusFilter !== "all" && order.status !== statusFilter) return false;
     if (searchTerm) {
-      const term = searchTerm.toLowerCase()
+      const term = searchTerm.toLowerCase();
       return (
         order.order_id.toString().includes(term) ||
         order.description?.toLowerCase().includes(term) ||
         order.driver?.name.toLowerCase().includes(term)
-      )
+      );
     }
-    return true
-  })
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -173,7 +174,7 @@ export default function OrdersPage() {
         <h1 className="text-3xl font-bold">Orders</h1>
         <div className="flex items-center gap-4">
           <Select
-            value={selectedMerchant?.toString() || ''}
+            value={selectedMerchant?.toString() || ""}
             onValueChange={(value) => setSelectedMerchant(parseInt(value))}
           >
             <SelectTrigger className="w-[200px]">
@@ -258,16 +259,16 @@ export default function OrdersPage() {
               filteredOrders.map((order) => (
                 <TableRow key={order.order_id}>
                   <TableCell>{order.order_id}</TableCell>
-                  <TableCell>{order.description || '-'}</TableCell>
+                  <TableCell>{order.description || "-"}</TableCell>
                   <TableCell>
-                    {format(new Date(order.pickup_time), 'MMM dd, yyyy HH:mm')}
+                    {format(new Date(order.pickup_time), "MMM dd, yyyy HH:mm")}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(order.dropoff_time), 'MMM dd, yyyy HH:mm')}
+                    {format(new Date(order.dropoff_time), "MMM dd, yyyy HH:mm")}
                   </TableCell>
                   <TableCell>{order.weight} kg</TableCell>
                   <TableCell>
-                    {order.driver ? order.driver.name : '-'}
+                    {order.driver ? order.driver.name : "-"}
                   </TableCell>
                   <TableCell>
                     <span
@@ -284,7 +285,10 @@ export default function OrdersPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleEdit(order)}
-                        disabled={order.status === 'completed' || order.status === 'cancelled'}
+                        disabled={
+                          order.status === "completed" ||
+                          order.status === "cancelled"
+                        }
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -292,7 +296,10 @@ export default function OrdersPage() {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleCancel(order.order_id)}
-                        disabled={order.status === 'completed' || order.status === 'cancelled'}
+                        disabled={
+                          order.status === "completed" ||
+                          order.status === "cancelled"
+                        }
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -309,12 +316,12 @@ export default function OrdersPage() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
-              {editingOrder ? 'Edit Order' : 'Create Order'}
+              {editingOrder ? "Edit Order" : "Create Order"}
             </DialogTitle>
             <DialogDescription>
               {editingOrder
-                ? 'Update the order details below.'
-                : 'Fill in the details to create a new order.'}
+                ? "Update the order details below."
+                : "Fill in the details to create a new order."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -370,6 +377,5 @@ export default function OrdersPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
-

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { api } from '../api/client'
-import type { Driver, Shift, Order } from '../types'
+import { useState, useEffect } from "react";
+import { api } from "../api/client";
+import type { Driver, Shift, Order } from "../types";
 import {
   Table,
   TableBody,
@@ -8,82 +8,81 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../components/ui/table'
+} from "../components/ui/table";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '../components/ui/dialog'
-import { format, parseISO, startOfWeek, addDays, isSameDay } from 'date-fns'
-import { Calendar } from 'lucide-react'
+} from "../components/ui/dialog";
+import { format, parseISO, startOfWeek, addDays, isSameDay } from "date-fns";
 
 export default function DriversPage() {
-  const [drivers, setDrivers] = useState<Driver[]>([])
-  const [shifts, setShifts] = useState<Shift[]>([])
-  const [selectedShift, setSelectedShift] = useState<Shift | null>(null)
-  const [shiftOrders, setShiftOrders] = useState<Order[]>([])
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+  const [shiftOrders, setShiftOrders] = useState<Order[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadData()
-  }, [])
+    loadData();
+  }, []);
 
   const loadData = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const [driversData, shiftsData] = await Promise.all([
         api.getDrivers(),
         api.getShifts(),
-      ])
-      setDrivers(driversData)
-      setShifts(shiftsData)
+      ]);
+      setDrivers(driversData);
+      setShifts(shiftsData);
     } catch (err) {
-      console.error('Failed to load data:', err)
+      console.error("Failed to load data:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleShiftClick = async (shift: Shift) => {
-    setSelectedShift(shift)
-    setIsDialogOpen(true)
+    setSelectedShift(shift);
+    setIsDialogOpen(true);
 
     // Load orders for this shift
     try {
-      const allOrders = await api.getOrders(1, 1, 1000) // Get all orders
-      const shiftDate = parseISO(shift.shift_date)
-      const shiftStart = parseISO(`${shift.shift_date}T${shift.start_time}`)
-      const shiftEnd = parseISO(`${shift.shift_date}T${shift.end_time}`)
+      const allOrders = await api.getOrders(1, 1, 1000); // Get all orders
+      const shiftDate = parseISO(shift.shift_date);
+      const shiftStart = parseISO(`${shift.shift_date}T${shift.start_time}`);
+      const shiftEnd = parseISO(`${shift.shift_date}T${shift.end_time}`);
 
       const ordersInShift = allOrders.filter((order) => {
-        if (order.driver_id !== shift.driver_id) return false
-        const orderPickup = parseISO(order.pickup_time)
+        if (order.driver_id !== shift.driver_id) return false;
+        const orderPickup = parseISO(order.pickup_time);
         return (
           isSameDay(orderPickup, shiftDate) &&
           orderPickup >= shiftStart &&
           orderPickup <= shiftEnd
-        )
-      })
+        );
+      });
 
-      setShiftOrders(ordersInShift)
+      setShiftOrders(ordersInShift);
     } catch (err) {
-      console.error('Failed to load shift orders:', err)
-      setShiftOrders([])
+      console.error("Failed to load shift orders:", err);
+      setShiftOrders([]);
     }
-  }
+  };
 
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const getShiftsForDay = (date: Date) => {
     return shifts.filter((shift) => {
-      const shiftDate = parseISO(shift.shift_date)
-      return isSameDay(shiftDate, date)
-    })
-  }
+      const shiftDate = parseISO(shift.shift_date);
+      return isSameDay(shiftDate, date);
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -118,14 +117,14 @@ export default function DriversPage() {
                   drivers.map((driver) => {
                     const driverShifts = shifts.filter(
                       (s) => s.driver_id === driver.id
-                    )
+                    );
                     return (
                       <TableRow key={driver.id}>
                         <TableCell>{driver.id}</TableCell>
                         <TableCell>{driver.name}</TableCell>
                         <TableCell>{driverShifts.length}</TableCell>
                       </TableRow>
-                    )
+                    );
                   })
                 )}
               </TableBody>
@@ -138,20 +137,17 @@ export default function DriversPage() {
             <h2 className="mb-4 text-lg font-semibold">Shift Calendar</h2>
             <div className="space-y-2">
               {weekDays.map((day) => {
-                const dayShifts = getShiftsForDay(day)
+                const dayShifts = getShiftsForDay(day);
                 return (
-                  <div
-                    key={day.toISOString()}
-                    className="rounded border p-2"
-                  >
+                  <div key={day.toISOString()} className="rounded border p-2">
                     <div className="mb-2 text-sm font-medium">
-                      {format(day, 'EEE, MMM dd')}
+                      {format(day, "EEE, MMM dd")}
                     </div>
                     <div className="space-y-1">
                       {dayShifts.map((shift) => {
                         const driver = drivers.find(
                           (d) => d.id === shift.driver_id
-                        )
+                        );
                         return (
                           <button
                             key={shift.id}
@@ -159,13 +155,13 @@ export default function DriversPage() {
                             className="w-full rounded bg-blue-100 p-2 text-left text-sm hover:bg-blue-200"
                           >
                             <div className="font-medium">
-                              {driver?.name || 'Unknown'}
+                              {driver?.name || "Unknown"}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {shift.start_time} - {shift.end_time}
                             </div>
                           </button>
-                        )
+                        );
                       })}
                       {dayShifts.length === 0 && (
                         <div className="text-sm text-muted-foreground">
@@ -174,7 +170,7 @@ export default function DriversPage() {
                       )}
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           </div>
@@ -188,9 +184,9 @@ export default function DriversPage() {
             <DialogDescription>
               {selectedShift && (
                 <>
-                  {selectedShift.driver_name || 'Driver'} -{' '}
-                  {format(parseISO(selectedShift.shift_date), 'MMM dd, yyyy')}{' '}
-                  ({selectedShift.start_time} - {selectedShift.end_time})
+                  {selectedShift.driver_name || "Driver"} -{" "}
+                  {format(parseISO(selectedShift.shift_date), "MMM dd, yyyy")} (
+                  {selectedShift.start_time} - {selectedShift.end_time})
                 </>
               )}
             </DialogDescription>
@@ -214,12 +210,9 @@ export default function DriversPage() {
                   {shiftOrders.map((order) => (
                     <TableRow key={order.order_id}>
                       <TableCell>{order.order_id}</TableCell>
-                      <TableCell>{order.description || '-'}</TableCell>
+                      <TableCell>{order.description || "-"}</TableCell>
                       <TableCell>
-                        {format(
-                          parseISO(order.pickup_time),
-                          'HH:mm'
-                        )}
+                        {format(parseISO(order.pickup_time), "HH:mm")}
                       </TableCell>
                       <TableCell>{order.weight} kg</TableCell>
                       <TableCell>{order.status}</TableCell>
@@ -232,6 +225,5 @@ export default function DriversPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
-
