@@ -24,14 +24,16 @@ async function request<T>(
 
 export const api = {
   // Orders
-  getOrders: (merchantId: number, page = 1, perPage = 50) =>
-    request<{
+  getOrders: (merchantId: number, page = 1, perPage = 50, search?: string) => {
+    const searchParam = search ? `&search=${encodeURIComponent(search)}` : ''
+    return request<{
       orders: Order[]
       total: number
       page: number
       per_page: number
       total_pages: number
-    }>(`/orders?merchant_id=${merchantId}&page=${page}&per_page=${perPage}`),
+    }>(`/orders?merchant_id=${merchantId}&page=${page}&per_page=${perPage}${searchParam}`)
+  },
 
   createOrder: (data: {
     merchant_id: number

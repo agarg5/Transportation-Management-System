@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ReactPaginate from "react-paginate";
 import { api } from "../api/client";
 import type { Order, Merchant } from "../types";
 import { Button } from "../components/ui/button";
@@ -41,8 +42,12 @@ export default function OrdersPage() {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [selectedMerchant, setSelectedMerchant] = useState<number | null>(null);
   const [page, setPage] = useState(1);
+  const [perPage] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,11 +65,26 @@ export default function OrdersPage() {
     loadMerchants();
   }, []);
 
+  // Debounce search term to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (selectedMerchant) {
+      setPage(1); // Reset to page 1 when merchant or search changes
+    }
+  }, [selectedMerchant, debouncedSearchTerm]);
+
   useEffect(() => {
     if (selectedMerchant) {
       loadOrders();
     }
-  }, [selectedMerchant, page, statusFilter]);
+  }, [selectedMerchant, page, debouncedSearchTerm]);
 
   const loadMerchants = async () => {
     try {
@@ -82,15 +102,27 @@ export default function OrdersPage() {
     if (!selectedMerchant) return;
     setLoading(true);
     try {
-      const data = await api.getOrders(selectedMerchant, page, 50);
-      setOrders(data);
+      // Only send search if there's a search term
+      const searchQuery = debouncedSearchTerm.trim() || undefined;
+      const response = await api.getOrders(
+        selectedMerchant,
+        page,
+        perPage,
+        searchQuery
+      );
+      setOrders(response.orders);
+      setTotal(response.total);
+      setTotalPages(response.total_pages);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load orders");
     } finally {
       setLoading(false);
     }
   };
-  console.log(orders);
+
+  const handlePageChange = ({ selected }: { selected: number }) => {
+    setPage(selected + 1); // react-paginate uses 0-based index, our API uses 1-based
+  };
 
   const handleCreate = () => {
     setEditingOrder(null);
@@ -137,7 +169,8 @@ export default function OrdersPage() {
         setSuccess("Order created successfully");
       }
       setIsDialogOpen(false);
-      loadOrders();
+      // Reset to page 1 to see the new/updated order
+      setPage(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save order");
     }
@@ -155,16 +188,9 @@ export default function OrdersPage() {
     }
   };
 
+  // Filter orders by status only (search is now handled by the API)
   const filteredOrders = orders.filter((order) => {
     if (statusFilter !== "all" && order.status !== statusFilter) return false;
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      return (
-        order.order_id.toString().includes(term) ||
-        order.description?.toLowerCase().includes(term) ||
-        order.driver?.name.toLowerCase().includes(term)
-      );
-    }
     return true;
   });
 
@@ -311,6 +337,37 @@ export default function OrdersPage() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between py-4">
+          <div className="text-sm text-muted-foreground">
+            Showing {(page - 1) * perPage + 1} to{" "}
+            {Math.min(page * perPage, total)} of {total} orders
+          </div>
+          <ReactPaginate
+            previousLabel="Previous"
+            nextLabel="Next"
+            pageCount={totalPages}
+            onPageChange={handlePageChange}
+            forcePage={page - 1} // Convert to 0-based index
+            containerClassName="flex items-center gap-1"
+            previousClassName=""
+            nextClassName=""
+            pageClassName=""
+            breakClassName=""
+            previousLinkClassName="px-3 py-2 text-sm font-medium text-foreground bg-background border border-input rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background"
+            nextLinkClassName="px-3 py-2 text-sm font-medium text-foreground bg-background border border-input rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background"
+            pageLinkClassName="px-3 py-2 text-sm font-medium text-foreground bg-background border border-input rounded-md hover:bg-accent hover:text-accent-foreground min-w-[40px] text-center"
+            activeLinkClassName="px-3 py-2 text-sm font-medium text-primary-foreground bg-primary border border-primary rounded-md hover:bg-primary/90 min-w-[40px] text-center"
+            disabledLinkClassName="opacity-50 cursor-not-allowed"
+            breakLabel="..."
+            breakLinkClassName="px-3 py-2 text-sm text-muted-foreground"
+            marginPagesDisplayed={1}
+            pageRangeDisplayed={5}
+          />
+        </div>
+      )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">

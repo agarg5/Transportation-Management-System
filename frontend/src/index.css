@@ -58,3 +58,22 @@
   }
 }
 
+/* React Paginate styling */
+.pagination {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pagination li {
+  display: inline-block;
+}
+
+.pagination a {
+  display: inline-block;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+}
+

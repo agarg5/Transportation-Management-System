@@ -277,33 +277,44 @@ def get_shifts():
 
 @app.route('/orders', methods=['GET'])
 def get_orders():
-    """Retrieve all orders for the merchant with pagination."""
+    """Retrieve all orders for the merchant with pagination and search."""
     merchant_id = request.args.get('merchant_id', type=int)
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
+    search = request.args.get('search', type=str)
 
     if not merchant_id:
         return jsonify({"error": "merchant_id query parameter is required"}), 400
 
     conn = get_db_connection()
 
-    # Get total count
-    total = conn.execute(
-        'SELECT COUNT(*) as count FROM orders WHERE merchant_id = ?',
-        (merchant_id,)).fetchone()['count']
+    # Build WHERE clause with search
+    where_clause = "o.merchant_id = ?"
+    params = [merchant_id]
+
+    if search:
+        where_clause += " AND (CAST(o.id AS TEXT) LIKE ? OR o.description LIKE ? OR d.name LIKE ?)"
+        search_pattern = f"%{search}%"
+        params.extend([search_pattern, search_pattern, search_pattern])
+
+    # Get total count with search
+    total_query = f'SELECT COUNT(*) as count FROM orders o LEFT JOIN drivers d ON o.driver_id = d.id WHERE {where_clause}'
+    total = conn.execute(total_query, tuple(params)).fetchone()['count']
 
     # Get paginated orders with all required fields
     offset = (page - 1) * per_page
-    orders = conn.execute('''
+    orders_query = f'''
         SELECT o.id as order_id, o.merchant_id, o.status, o.driver_id,
                o.description, o.pickup_time, o.dropoff_time, o.weight,
                d.name as driver_name
         FROM orders o
         LEFT JOIN drivers d ON o.driver_id = d.id
-        WHERE o.merchant_id = ?
+        WHERE {where_clause}
         ORDER BY o.created_at DESC
         LIMIT ? OFFSET ?
-    ''', (merchant_id, per_page, offset)).fetchall()
+    '''
+    orders = conn.execute(orders_query, tuple(
+        params + [per_page, offset])).fetchall()
 
     conn.close()
 
@@ -329,7 +340,13 @@ def get_orders():
             }
         formatted_orders.append(formatted_order)
 
-    return jsonify(formatted_orders)
+    return jsonify({
+        'orders': formatted_orders,
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'total_pages': (total + per_page - 1) // per_page
+    })
 
 
 @app.route('/orders', methods=['POST'])
@@ -669,13 +686,14 @@ def upload_csv():
             for row in csv_reader:
                 try:
                     driver_id = row.get('driver_id') if row.get(
-                        'driver_id') else None
+                        'driver_id') and row.get('driver_id').strip() else None
                     vehicle_id = row.get('vehicle_id') if row.get(
-                        'vehicle_id') else None
+                        'vehicle_id') and row.get('vehicle_id').strip() else None
                     description = row.get('description', '')
 
+                    # Use INSERT OR REPLACE to update existing orders
                     conn.execute(
-                        'INSERT OR IGNORE INTO orders (id, merchant_id, driver_id, vehicle_id, status, description, pickup_time, dropoff_time, weight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        'INSERT OR REPLACE INTO orders (id, merchant_id, driver_id, vehicle_id, status, description, pickup_time, dropoff_time, weight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                         (row['id'], row['merchant_id'], driver_id, vehicle_id,
                          row.get('status', 'pending'), description,
                          row['pickup_time'], row['dropoff_time'], row['weight'])
@@ -706,6 +724,39 @@ def upload_csv():
 def home():
     """Health check endpoint."""
     return jsonify({"message": "Order Management System is running!", "status": "healthy"})
+
+
+@app.route('/admin/db-view', methods=['GET'])
+def view_database():
+    """View database contents for debugging."""
+    table = request.args.get('table', 'orders')
+    limit = request.args.get('limit', 100, type=int)
+
+    if table not in ['merchants', 'drivers', 'vehicles', 'shifts', 'orders']:
+        return jsonify({"error": "Invalid table name"}), 400
+
+    conn = get_db_connection()
+
+    # Get table schema
+    schema = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    columns = [col[1] for col in schema]
+
+    # Get data
+    data = conn.execute(f"SELECT * FROM {table} LIMIT ?", (limit,)).fetchall()
+
+    # Get total count
+    total = conn.execute(
+        f"SELECT COUNT(*) as count FROM {table}").fetchone()['count']
+
+    conn.close()
+
+    return jsonify({
+        "table": table,
+        "columns": columns,
+        "total_rows": total,
+        "showing": len(data),
+        "data": [dict(row) for row in data]
+    })
 
 
 @app.route('/merchants', methods=['GET'])
