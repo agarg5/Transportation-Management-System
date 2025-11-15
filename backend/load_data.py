@@ -7,6 +7,8 @@ import csv
 import sqlite3
 import os
 
+from werkzeug.security import generate_password_hash
+
 # Get the directory where this script is located
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_PATH = os.getenv('DATABASE_PATH', os.path.join(SCRIPT_DIR, '..', 'data', 'database.db'))
@@ -27,9 +29,19 @@ def load_merchants():
         reader = csv.DictReader(f)
         for row in reader:
             try:
+                # Support either plaintext password (preferred for the assignment)
+                # or an existing password_hash column for backwards compatibility.
+                raw_password = row.get('password')
+                existing_hash = row.get('password_hash')
+
+                if raw_password:
+                    password_hash = generate_password_hash(raw_password)
+                else:
+                    password_hash = existing_hash
+
                 conn.execute(
-                    'INSERT INTO merchants (id, name, email) VALUES (?, ?, ?)',
-                    (row['id'], row['name'], row['email'])
+                    'INSERT INTO merchants (id, name, email, password_hash) VALUES (?, ?, ?, ?)',
+                    (row['id'], row['name'], row['email'], password_hash)
                 )
                 count += 1
             except sqlite3.IntegrityError:
@@ -139,6 +151,40 @@ def load_orders():
     print(f"Loaded {count} orders")
     return count
 
+def assign_pending_orders():
+    """Run driver assignment for all pending orders after CSV import."""
+    from app import assign_driver_to_order
+    
+    conn = get_db_connection()
+    
+    # Get all pending orders
+    pending_orders = conn.execute('''
+        SELECT id, pickup_time, dropoff_time, weight
+        FROM orders
+        WHERE status = 'pending'
+        ORDER BY id
+    ''').fetchall()
+    
+    print(f"\nProcessing {len(pending_orders)} pending orders for driver assignment...")
+    
+    assigned = 0
+    for order in pending_orders:
+        driver_id, vehicle_id = assign_driver_to_order(
+            conn,
+            order['id'],
+            order['pickup_time'],
+            order['dropoff_time'],
+            order['weight']
+        )
+        if driver_id and vehicle_id:
+            assigned += 1
+    
+    conn.close()
+    print(f"Assigned {assigned} orders to drivers")
+    print(f"{len(pending_orders) - assigned} orders remain pending (no available driver/vehicle)")
+    
+    return assigned, len(pending_orders) - assigned
+
 if __name__ == '__main__':
     print("Loading CSV data into database...")
     print("=" * 50)
@@ -166,6 +212,9 @@ if __name__ == '__main__':
     vehicles_count = load_vehicles()
     shifts_count = load_shifts()
     orders_count = load_orders()
+    
+    # Run driver assignment for pending orders
+    assigned_count, still_pending_count = assign_pending_orders()
 
     print("=" * 50)
     print("Data loading complete!")
@@ -174,5 +223,7 @@ if __name__ == '__main__':
     print(f"  - {drivers_count} drivers")
     print(f"  - {vehicles_count} vehicles")
     print(f"  - {shifts_count} shifts")
-    print(f"  - {orders_count} orders")
+    print(f"  - {orders_count} orders loaded")
+    print(f"  - {assigned_count} orders assigned to drivers")
+    print(f"  - {still_pending_count} orders still pending")
 

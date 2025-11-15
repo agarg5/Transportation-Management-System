@@ -150,7 +150,7 @@ export default function UploadPage() {
           <div>
             <h3 className="font-semibold">Merchants</h3>
             <p className="text-muted-foreground">
-              Columns: id, name, email
+              Columns: id, name, email, password_hash (optional)
             </p>
           </div>
           <div>

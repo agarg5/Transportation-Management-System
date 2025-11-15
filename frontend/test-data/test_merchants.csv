@@ -1,5 +1,5 @@
-id,name,email
-1,Test Merchant 1,test1@example.com
-101,Test Merchant 2,test2@example.com
-102,Test Merchant 3,test3@example.com
+id,name,email,password
+1,Test Merchant 1,test1@example.com,test1-pass
+101,Test Merchant 2,test2@example.com,test2-pass
+102,Test Merchant 3,test3@example.com,test3-pass
 

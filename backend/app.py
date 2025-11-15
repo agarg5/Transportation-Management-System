@@ -4,9 +4,13 @@ import threading
 import random
 import time
 from datetime import datetime, timedelta, time as dt_time
+from functools import wraps
+
+import jwt
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 CORS(app)
@@ -17,6 +21,11 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_PATH = os.getenv('DATABASE_PATH', os.path.join(
     SCRIPT_DIR, '..', 'data', 'database.db'))
+
+# JWT configuration (simple symmetric HS256 token)
+JWT_SECRET = os.getenv('JWT_SECRET', 'dev-secret-key-change-me')
+JWT_ALGORITHM = 'HS256'
+JWT_EXPIRATION_MINUTES = int(os.getenv('JWT_EXPIRATION_MINUTES', '60'))
 
 # Lock for order updates (to prevent race conditions)
 order_locks = {}
@@ -40,6 +49,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
             email TEXT NOT NULL UNIQUE,
+            password_hash TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -106,6 +116,12 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add password_hash to merchants if it doesn't exist (for existing databases)
+    try:
+        conn.execute('ALTER TABLE merchants ADD COLUMN password_hash TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     conn.commit()
     conn.close()
 
@@ -136,10 +152,41 @@ def validate_order_times(pickup_time_str, dropoff_time_str):
     return True, None
 
 
+def create_access_token(merchant_row):
+    """Create a signed JWT for a merchant row (sqlite3.Row)."""
+    now = datetime.utcnow()
+    payload = {
+        'sub': merchant_row['id'],
+        'email': merchant_row['email'],
+        'iat': now,
+        'exp': now + timedelta(minutes=JWT_EXPIRATION_MINUTES),
+        'type': 'access',
+    }
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    # PyJWT can return bytes in some versions; normalize to str
+    if isinstance(token, bytes):
+        token = token.decode('utf-8')
+    return token
+
+
 def find_available_driver(conn, pickup_time_str, dropoff_time_str, weight, exclude_driver_id=None):
-    """
-    Find an available driver for an order.
-    Checks: shift availability, vehicle capacity (orders and weight).
+    """Find an available driver + vehicle for a new or updated order.
+
+    Assignment rules / assumptions:
+    - A driver is eligible only if they have a shift whose (date, start_time, end_time)
+      fully covers the order's pickup and dropoff time window.
+    - Each driver has exactly one vehicle; we enforce the vehicle's:
+      * max_weight: the order's weight must be <= max_weight
+      * max_orders: maximum number of *overlapping* orders that vehicle can carry.
+        We consider orders overlapping if:
+          existing.pickup_time < new.dropoff_time AND
+          existing.dropoff_time > new.pickup_time
+      Only orders with status IN ('assigned', 'completed') are counted, since they
+      represent work that has been or will be performed.
+    - The algorithm is greedy: it returns the first driver that satisfies all
+      constraints, based on the ordering of shifts returned by SQLite.
+    - When exclude_driver_id is provided, that driver is skipped entirely. This is
+      used by the update path when the old driver is known to no longer fit.
     """
     try:
         pickup_time = datetime.fromisoformat(
@@ -181,8 +228,10 @@ def find_available_driver(conn, pickup_time_str, dropoff_time_str, weight, exclu
             continue
 
         # Count current assigned orders for this vehicle on the same day
-        # that overlap with the order time window
-        # Two orders overlap if: (start1 < end2) AND (end1 > start2)
+        # that overlap with the order time window.
+        # Two orders overlap if: (start1 < end2) AND (end1 > start2).
+        # This effectively limits the number of concurrent orders a vehicle
+        # can handle during any time window.
         overlapping_orders = conn.execute('''
             SELECT COUNT(*) as count
             FROM orders
@@ -520,8 +569,10 @@ def update_order(order_id):
                     if shift:
                         # Check vehicle weight capacity
                         if weight <= vehicle['max_weight']:
-                            # Check current order count (excluding this order)
-                            # Two orders overlap if: (start1 < end2) AND (end1 > start2)
+                            # Check current order count (excluding this order).
+                            # Two orders overlap if: (start1 < end2) AND (end1 > start2).
+                            # This ensures we respect max_orders as a limit on
+                            # concurrent work for that vehicle.
                             overlapping = conn.execute('''
                                 SELECT COUNT(*) as count
                                 FROM orders
@@ -618,6 +669,48 @@ def delete_order(order_id):
 # ==================== OTHER ENDPOINTS (for admin/internal use) ====================
 
 
+# ==================== AUTH ====================
+
+
+@app.route('/auth/login', methods=['POST'])
+def login():
+    """Authenticate a merchant with email + password and return a JWT."""
+    data = request.get_json() or {}
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    conn = get_db_connection()
+    merchant = conn.execute(
+        'SELECT * FROM merchants WHERE email = ?', (email,)
+    ).fetchone()
+    conn.close()
+
+    # Either merchant doesn't exist or has no password configured
+    if not merchant or not merchant['password_hash']:
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    if not check_password_hash(merchant['password_hash'], password):
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    token = create_access_token(merchant)
+
+    merchant_data = {
+        "id": merchant["id"],
+        "name": merchant["name"],
+        "email": merchant["email"],
+    }
+
+    return jsonify({
+        "access_token": token,
+        "token_type": "Bearer",
+        "expires_in": JWT_EXPIRATION_MINUTES * 60,
+        "merchant": merchant_data,
+    }), 200
+
+
 @app.route('/upload', methods=['POST'])
 def upload_csv():
     """Upload and process CSV file."""
@@ -651,9 +744,20 @@ def upload_csv():
         if csv_type == 'merchants':
             for row in csv_reader:
                 try:
+                    # Allow plaintext passwords in the CSV for the assignment.
+                    # If a "password" column is present, hash it before storing.
+                    # If only "password_hash" exists, use it as-is for backwards compatibility.
+                    raw_password = row.get('password')
+                    existing_hash = row.get('password_hash')
+
+                    if raw_password:
+                        password_hash = generate_password_hash(raw_password)
+                    else:
+                        password_hash = existing_hash
+
                     conn.execute(
-                        'INSERT OR IGNORE INTO merchants (id, name, email) VALUES (?, ?, ?)',
-                        (row['id'], row['name'], row['email'])
+                        'INSERT OR IGNORE INTO merchants (id, name, email, password_hash) VALUES (?, ?, ?, ?)',
+                        (row['id'], row['name'], row['email'], password_hash)
                     )
                     count += 1
                 except Exception as e:
