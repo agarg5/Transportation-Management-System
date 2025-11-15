@@ -8,13 +8,13 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY requirements.txt .
+COPY backend/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Copy backend application code
+COPY backend/ ./backend/
 
 # Create directory for SQLite database
 RUN mkdir -p /app/data
@@ -27,4 +27,4 @@ ENV DATABASE_PATH=/app/data/database.db
 EXPOSE 8000
 
 # Run the application
-CMD ["python", "app.py"]
+CMD ["python", "backend/app.py"]

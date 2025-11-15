@@ -9,7 +9,9 @@ app = Flask(__name__)
 CORS(app)
 
 # Database configuration
-DATABASE_PATH = os.getenv('DATABASE_PATH', 'data/database.db')
+# Default to ../data/database.db relative to backend folder
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE_PATH = os.getenv('DATABASE_PATH', os.path.join(SCRIPT_DIR, '..', 'data', 'database.db'))
 
 # Lock for order updates (to prevent race conditions)
 order_locks = {}

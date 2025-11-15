@@ -50,14 +50,14 @@ export default function DriversPage() {
   const handleShiftClick = async (shift: Shift) => {
     setSelectedShift(shift)
     setIsDialogOpen(true)
-    
+
     // Load orders for this shift
     try {
       const allOrders = await api.getOrders(1, 1, 1000) // Get all orders
       const shiftDate = parseISO(shift.shift_date)
       const shiftStart = parseISO(`${shift.shift_date}T${shift.start_time}`)
       const shiftEnd = parseISO(`${shift.shift_date}T${shift.end_time}`)
-      
+
       const ordersInShift = allOrders.filter((order) => {
         if (order.driver_id !== shift.driver_id) return false
         const orderPickup = parseISO(order.pickup_time)
@@ -67,7 +67,7 @@ export default function DriversPage() {
           orderPickup <= shiftEnd
         )
       })
-      
+
       setShiftOrders(ordersInShift)
     } catch (err) {
       console.error('Failed to load shift orders:', err)

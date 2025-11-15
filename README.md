@@ -6,13 +6,22 @@ A Python Flask backend with SQLite database for managing orders, merchants, driv
 
 ```
 .
-├── Dockerfile
-├── requirements.txt
-├── app.py                 # Main Flask application
-├── generate_datasets.py   # Script to generate CSV datasets
-├── load_data.py          # Script to load CSV data into database
+├── backend/              # Backend Python application
+│   ├── app.py            # Main Flask application
+│   ├── requirements.txt  # Python dependencies
+│   ├── generate_datasets.py  # Script to generate CSV datasets
+│   ├── load_data.py      # Script to load CSV data into database
+│   ├── test_app.py       # Test suite
+│   ├── pytest.ini       # Pytest configuration
+│   └── *.csv            # Generated CSV datasets
+├── frontend/             # Frontend React application
+│   ├── src/              # React source code
+│   ├── package.json      # Node dependencies
+│   └── vite.config.ts    # Vite configuration
+├── data/                 # SQLite database storage (created automatically)
+├── Dockerfile            # Docker configuration for backend
 ├── .dockerignore
-└── data/                 # SQLite database storage (created automatically)
+└── README.md
 ```
 
 ## Database Schema
@@ -86,10 +95,11 @@ The `-v $(pwd)/data:/app/data` flag mounts a local directory to persist the data
 
 1. Generate CSV datasets:
 ```bash
+cd backend
 python3 generate_datasets.py
 ```
 
-This creates:
+This creates CSV files in the `backend/` directory:
 - `merchants.csv` - 10 merchants
 - `drivers.csv` - 50 drivers
 - `shifts.csv` - 500 shifts (50 drivers × 10 days)
@@ -98,6 +108,7 @@ This creates:
 
 2. Load data into database:
 ```bash
+cd backend
 python3 load_data.py
 ```
 
@@ -177,8 +188,11 @@ python3 load_data.py
 
 ## Local Development (without Docker)
 
+### Backend
+
 1. Create a virtual environment:
 ```bash
+cd backend
 python3 -m venv venv
 source venv/bin/activate
 ```
@@ -192,6 +206,21 @@ pip install -r requirements.txt
 ```bash
 python app.py
 ```
+
+### Frontend
+
+1. Install dependencies:
+```bash
+cd frontend
+npm install
+```
+
+2. Run the development server:
+```bash
+npm run dev
+```
+
+The frontend will be available at `http://localhost:3000` and will proxy API requests to the backend at `http://localhost:8000`.
 
 ## Testing the API
 

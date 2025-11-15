@@ -7,7 +7,7 @@ import { cn } from './lib/utils'
 
 function Navigation() {
   const location = useLocation()
-  
+
   const navItems = [
     { path: '/orders', label: 'Orders' },
     { path: '/drivers', label: 'Drivers' },

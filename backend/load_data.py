@@ -7,7 +7,9 @@ import csv
 import sqlite3
 import os
 
-DATABASE_PATH = os.getenv('DATABASE_PATH', 'data/database.db')
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE_PATH = os.getenv('DATABASE_PATH', os.path.join(SCRIPT_DIR, '..', 'data', 'database.db'))
 
 def get_db_connection():
     """Create a database connection."""
@@ -20,7 +22,8 @@ def load_merchants():
     conn = get_db_connection()
     count = 0
 
-    with open('merchants.csv', 'r') as f:
+    csv_path = os.path.join(SCRIPT_DIR, 'merchants.csv')
+    with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             try:
@@ -42,7 +45,8 @@ def load_drivers():
     conn = get_db_connection()
     count = 0
 
-    with open('drivers.csv', 'r') as f:
+    csv_path = os.path.join(SCRIPT_DIR, 'drivers.csv')
+    with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             try:
@@ -64,7 +68,8 @@ def load_vehicles():
     conn = get_db_connection()
     count = 0
 
-    with open('vehicles.csv', 'r') as f:
+    csv_path = os.path.join(SCRIPT_DIR, 'vehicles.csv')
+    with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             try:
@@ -86,7 +91,8 @@ def load_shifts():
     conn = get_db_connection()
     count = 0
 
-    with open('shifts.csv', 'r') as f:
+    csv_path = os.path.join(SCRIPT_DIR, 'shifts.csv')
+    with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             try:
@@ -108,7 +114,8 @@ def load_orders():
     conn = get_db_connection()
     count = 0
 
-    with open('orders.csv', 'r') as f:
+    csv_path = os.path.join(SCRIPT_DIR, 'orders.csv')
+    with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             try:
@@ -141,7 +148,7 @@ if __name__ == '__main__':
 
     # Check if CSV files exist
     required_files = ['merchants.csv', 'drivers.csv', 'vehicles.csv', 'shifts.csv', 'orders.csv']
-    missing_files = [f for f in required_files if not os.path.exists(f)]
+    missing_files = [f for f in required_files if not os.path.exists(os.path.join(SCRIPT_DIR, f))]
 
     if missing_files:
         print(f"Error: Missing CSV files: {', '.join(missing_files)}")

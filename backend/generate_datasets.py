@@ -41,7 +41,8 @@ def generate_merchants(num_merchants=10):
             'email': email
         })
 
-    with open('merchants.csv', 'w', newline='') as f:
+    csv_path = os.path.join(os.path.dirname(__file__), 'merchants.csv')
+    with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=['id', 'name', 'email'])
         writer.writeheader()
         writer.writerows(merchants)
@@ -68,7 +69,8 @@ def generate_drivers(num_drivers=50):
             'name': name
         })
 
-    with open('drivers.csv', 'w', newline='') as f:
+    csv_path = os.path.join(os.path.dirname(__file__), 'drivers.csv')
+    with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=['id', 'name'])
         writer.writeheader()
         writer.writerows(drivers)
@@ -110,7 +112,8 @@ def generate_shifts(drivers, num_days=10):
                 'end_time': end_time.strftime('%H:%M:%S')
             })
 
-    with open('shifts.csv', 'w', newline='') as f:
+    csv_path = os.path.join(os.path.dirname(__file__), 'shifts.csv')
+    with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(
             f, fieldnames=['id', 'driver_id', 'shift_date', 'start_time', 'end_time'])
         writer.writeheader()
@@ -135,7 +138,8 @@ def generate_vehicles(drivers):
             'max_weight': max_weight
         })
 
-    with open('vehicles.csv', 'w', newline='') as f:
+    csv_path = os.path.join(os.path.dirname(__file__), 'vehicles.csv')
+    with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(
             f, fieldnames=['id', 'driver_id', 'max_orders', 'max_weight'])
         writer.writeheader()
@@ -217,7 +221,8 @@ def generate_orders(merchants, num_orders=1000, num_days=10):
             'weight': weight
         })
 
-    with open('orders.csv', 'w', newline='') as f:
+    csv_path = os.path.join(os.path.dirname(__file__), 'orders.csv')
+    with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
             'id', 'merchant_id', 'driver_id', 'vehicle_id', 'status',
             'description', 'pickup_time', 'dropoff_time', 'weight'
