@@ -13,6 +13,7 @@ import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/LoginPage";
 import { cn } from "./lib/utils";
 import { getAuth, clearAuth } from "./api/client";
+import NotFoundPage from "./pages/NotFoundPage";
 
 function Navigation() {
   const location = useLocation();
@@ -133,6 +134,14 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <UploadPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="*"
+                      element={
+                        <ProtectedRoute>
+                          <NotFoundPage />
                         </ProtectedRoute>
                       }
                     />

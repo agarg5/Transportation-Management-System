@@ -1,6 +1,19 @@
 # Order Management System
 
-A Python Flask backend with SQLite database for managing orders, merchants, drivers, vehicles, and shifts.
+An application to manage last-mile package delivery by coordinating drivers and orders.
+
+A Python Flask backend with SQLite database and React+Tailwind frontend for managing orders, merchants, drivers, vehicles, and shifts.
+
+See a video demo at https://www.loom.com/share/e2d512a7f6074f5eb1f9fe98502d3239 and play around with the application yourself at https://transportation-management-system-t28m.onrender.com/
+
+## Features
+- authentication for merchants using JWT's. You can play around with the app by using these credentials (username: primeservices@example.com, password: prime-pass)
+- allocation algorithm to match packages, drivers, shifts
+- real-time map view showing where packages are
+- ability to upload CSV files with more data
+- responsive web design and pagination
+- back-end and front-end tests
+- data generation using Faker to seed the database
 
 ## Project Structure
 
