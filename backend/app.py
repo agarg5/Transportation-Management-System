@@ -812,4 +812,13 @@ if __name__ == '__main__':
     print("Location tracking started (sending updates every 5 seconds)")
 
     # Run the Flask app with SocketIO
-    socketio.run(app, host='0.0.0.0', port=8000, debug=True)
+    port = int(os.getenv('PORT', '8000'))
+    debug_mode = os.getenv('FLASK_DEBUG', 'true').lower() == 'true'
+    allow_unsafe = os.getenv('ALLOW_UNSAFE_WERKZEUG', 'true').lower() == 'true'
+    socketio.run(
+        app,
+        host='0.0.0.0',
+        port=port,
+        debug=debug_mode,
+        allow_unsafe_werkzeug=allow_unsafe,
+    )
