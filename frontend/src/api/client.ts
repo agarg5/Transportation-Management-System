@@ -1,6 +1,7 @@
 import type { Order, Driver, Merchant, Shift } from "../types";
 
-const API_BASE = "https://transportation-management-system-t28m.onrender.com";
+const API_BASE =
+  "https://transportation-management-system-backend2.onrender.com";
 
 // Simple auth storage in localStorage
 const AUTH_STORAGE_KEY = "tms_auth";

@@ -23,7 +23,7 @@ export default function TrackingPage() {
   const [connected, setConnected] = useState(false);
 
   const socketUrl =
-    "https://transportation-management-system-t28m.onrender.com";
+    "https://transportation-management-system-backend2.onrender.com";
 
   useEffect(() => {
     // Connect to Socket.IO server
