@@ -1,61 +1,69 @@
-import { useState, useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import { io } from 'socket.io-client'
-import type { LocationUpdate } from '../types'
-import 'leaflet/dist/leaflet.css'
-import L from 'leaflet'
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { useEffect, useState } from "react";
+import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { io } from "socket.io-client";
+import type { LocationUpdate } from "../types";
 
 // Fix for default marker icon
-delete (L.Icon.Default.prototype as any)._getIconUrl
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-})
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
 
 export default function TrackingPage() {
-  const [locations, setLocations] = useState<Map<number, LocationUpdate>>(new Map())
-  const wsRef = useRef<WebSocket | null>(null)
-  const [connected, setConnected] = useState(false)
+  const [locations, setLocations] = useState<Map<number, LocationUpdate>>(
+    new Map()
+  );
+  const [connected, setConnected] = useState(false);
+
+  const socketUrl =
+    "https://transportation-management-system-t28m.onrender.com";
 
   useEffect(() => {
     // Connect to Socket.IO server
-    const socket = io('http://localhost:8000', {
-      transports: ['websocket', 'polling']
-    })
+    const socket = io(socketUrl, {
+      transports: ["websocket", "polling"],
+    });
 
-    socket.on('connect', () => {
-      console.log('WebSocket connected')
-      setConnected(true)
-    })
+    socket.on("connect", () => {
+      console.log("WebSocket connected");
+      setConnected(true);
+    });
 
-    socket.on('location_update', (update: LocationUpdate) => {
+    socket.on("location_update", (update: LocationUpdate) => {
       setLocations((prev) => {
-        const newMap = new Map(prev)
-        newMap.set(update.driver_id, update)
-        return newMap
-      })
-    })
+        const newMap = new Map(prev);
+        newMap.set(update.driver_id, update);
+        return newMap;
+      });
+    });
 
-    socket.on('disconnect', () => {
-      console.log('WebSocket disconnected')
-      setConnected(false)
-    })
+    socket.on("disconnect", () => {
+      console.log("WebSocket disconnected");
+      setConnected(false);
+    });
 
-    socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error)
-      setConnected(false)
-    })
+    socket.on("connect_error", (error) => {
+      console.error("WebSocket connection error:", error);
+      setConnected(false);
+    });
 
     return () => {
-      socket.disconnect()
-    }
-  }, [])
+      socket.disconnect();
+    };
+  }, [socketUrl]);
 
-  const locationArray = Array.from(locations.values())
-  const center: [number, number] = locationArray.length > 0
-    ? [locationArray[0].latitude, locationArray[0].longitude]
-    : [40.7128, -74.0060] // Default to NYC
+  const locationArray = Array.from(locations.values());
+  const center: [number, number] =
+    locationArray.length > 0
+      ? [locationArray[0].latitude, locationArray[0].longitude]
+      : [40.7128, -74.006]; // Default to NYC
 
   return (
     <div className="space-y-6">
@@ -64,11 +72,11 @@ export default function TrackingPage() {
         <div className="flex items-center gap-2">
           <div
             className={`h-3 w-3 rounded-full ${
-              connected ? 'bg-green-500' : 'bg-red-500'
+              connected ? "bg-green-500" : "bg-red-500"
             }`}
           />
           <span className="text-sm text-muted-foreground">
-            {connected ? 'Connected' : 'Disconnected'}
+            {connected ? "Connected" : "Disconnected"}
           </span>
         </div>
       </div>
@@ -78,7 +86,7 @@ export default function TrackingPage() {
           <MapContainer
             center={center}
             zoom={13}
-            style={{ height: '100%', width: '100%' }}
+            style={{ height: "100%", width: "100%" }}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -96,7 +104,8 @@ export default function TrackingPage() {
                       Driver ID: {location.driver_id}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      Updated: {new Date(location.timestamp).toLocaleTimeString()}
+                      Updated:{" "}
+                      {new Date(location.timestamp).toLocaleTimeString()}
                     </div>
                   </div>
                 </Popup>
@@ -122,7 +131,8 @@ export default function TrackingPage() {
                 <div>
                   <div className="font-medium">{location.driver_name}</div>
                   <div className="text-sm text-muted-foreground">
-                    {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                    {location.latitude.toFixed(4)},{" "}
+                    {location.longitude.toFixed(4)}
                   </div>
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -134,6 +144,5 @@ export default function TrackingPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
-
