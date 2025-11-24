@@ -4,7 +4,7 @@ An application to manage last-mile package delivery by coordinating drivers and 
 
 A Python Flask backend with SQLite database and React+Tailwind frontend for managing orders, merchants, drivers, vehicles, and shifts.
 
-See a video demo at https://www.loom.com/share/e2d512a7f6074f5eb1f9fe98502d3239 and play around with the application yourself at https://transportation-management-system-t28m.onrender.com/
+See a video demo and explanation at https://www.loom.com/share/e2d512a7f6074f5eb1f9fe98502d3239
 
 ## Features
 - authentication for merchants using JWT's. You can play around with the app by using these credentials (username: primeservices@example.com, password: prime-pass)
