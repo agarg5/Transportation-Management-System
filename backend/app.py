@@ -48,6 +48,9 @@ def init_db():
 JWT_SECRET = os.getenv('JWT_SECRET', 'dev-secret-key-change-me')
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION_MINUTES = int(os.getenv('JWT_EXPIRATION_MINUTES', '60'))
+# Force a hashing algorithm that does not rely on hashlib.scrypt, which
+# is missing in some Python builds (seen on certain macOS environments).
+PASSWORD_HASH_METHOD = os.getenv('PASSWORD_HASH_METHOD', 'pbkdf2:sha256')
 
 # Lock for order updates (to prevent race conditions)
 order_locks = {}
@@ -647,7 +650,7 @@ def upload_csv():
                     existing_hash = row.get('password_hash')
 
                     if raw_password:
-                        password_hash = generate_password_hash(raw_password)
+                        password_hash = generate_password_hash(raw_password, method=PASSWORD_HASH_METHOD)
                     else:
                         password_hash = existing_hash
 

@@ -8,6 +8,8 @@ env/
 venv/
 ENV/
 .venv
+backend/lib
+backend/bin
 
 # Database
 *.db

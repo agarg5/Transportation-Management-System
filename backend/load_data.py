@@ -24,6 +24,10 @@ def load_merchants():
     conn = get_db_connection()
     count = 0
 
+    # Explicitly use a hash algorithm that works even when hashlib.scrypt
+    # is unavailable in the current Python build (e.g., some macOS builds).
+    password_method = os.getenv('PASSWORD_HASH_METHOD', 'pbkdf2:sha256')
+
     csv_path = os.path.join(SCRIPT_DIR, 'merchants.csv')
     with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
@@ -35,7 +39,7 @@ def load_merchants():
                 existing_hash = row.get('password_hash')
 
                 if raw_password:
-                    password_hash = generate_password_hash(raw_password)
+                    password_hash = generate_password_hash(raw_password, method=password_method)
                 else:
                     password_hash = existing_hash
 
@@ -154,9 +158,9 @@ def load_orders():
 def assign_pending_orders():
     """Run driver assignment for all pending orders after CSV import."""
     from app import assign_driver_to_order
-    
+
     conn = get_db_connection()
-    
+
     # Get all pending orders
     pending_orders = conn.execute('''
         SELECT id, pickup_time, dropoff_time, weight
@@ -164,9 +168,9 @@ def assign_pending_orders():
         WHERE status = 'pending'
         ORDER BY id
     ''').fetchall()
-    
+
     print(f"\nProcessing {len(pending_orders)} pending orders for driver assignment...")
-    
+
     assigned = 0
     for order in pending_orders:
         driver_id, vehicle_id = assign_driver_to_order(
@@ -178,11 +182,11 @@ def assign_pending_orders():
         )
         if driver_id and vehicle_id:
             assigned += 1
-    
+
     conn.close()
     print(f"Assigned {assigned} orders to drivers")
     print(f"{len(pending_orders) - assigned} orders remain pending (no available driver/vehicle)")
-    
+
     return assigned, len(pending_orders) - assigned
 
 if __name__ == '__main__':
@@ -212,7 +216,7 @@ if __name__ == '__main__':
     vehicles_count = load_vehicles()
     shifts_count = load_shifts()
     orders_count = load_orders()
-    
+
     # Run driver assignment for pending orders
     assigned_count, still_pending_count = assign_pending_orders()
 
