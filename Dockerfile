@@ -25,6 +25,12 @@ ENV DATABASE_PATH=/app/data/database.db
 
 # Expose port (adjust as needed)
 EXPOSE 8000
+EXPOSE 5173
 
 # Run the application
-CMD ["python", "backend/app.py"]
+COPY start.sh .
+
+RUN chmod +x start.sh
+
+# Run both frontend and backend
+CMD ["./start.sh"]
